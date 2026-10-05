@@ -1,6 +1,10 @@
 # HW1 — Funny lexer: regex → ε-NFA → DFA → minimization
 
-Учебная реализация HW1 без внешних Python-зависимостей.
+## Что это
+
+Лексер для учебного языка Funny. На входе — текст программы, на выходе — список токенов.
+
+Внутри: регулярные выражения → ε-НКА по Томпсону → ДКА через subset construction → полный ДКА с ловушкой → минимальный ДКА по Хопкрофту.
 
 ## Что реализовано
 
@@ -12,57 +16,46 @@
 6. Сериализация DFA и минимального DFA в JSON.
 7. Maximal munch / longest match для лексического анализа.
 8. Приоритет правил: если несколько токенов принимают одинаковую максимальную лексему, выигрывает правило с меньшим номером.
-9. Тесты на крайние случаи из задания.
+9. Тесты на крайние случаи.
 
 ## Требования
 
-Python 3.10+.
-
-Внешние библиотеки не нужны.
+Python 3.10+. Внешние библиотеки не нужны.
 
 ## Запуск
 
-Из каталога проекта:
-
 ```bash
-python main.py build
+python3 main.py build
 ```
 
-Будут созданы:
+Создаёт:
 
 - `output/nfa_stats.json`
 - `output/dfa.json`
 - `output/dfa_min.json`
 
-Проверка:
+Проверка тестов:
 
 ```bash
-python main.py test
+python3 main.py test
 ```
 
-Или напрямую:
+Проверка одной строки:
 
 ```bash
-python tests/run_tests.py
-```
-
-Проверка строки:
-
-```bash
-python main.py scan "function f(x) returns r { r = x + 1; }"
+python3 main.py scan "function f(x) returns r { r = x + 1; }"
 ```
 
 ## Структура
 
-- `lexer_spec.py` — спецификация токенов.
-- `automata.py` — regex parser, Thompson NFA, subset construction, Hopcroft minimization и scanner.
+- `lexer_spec.py` — список токенов.
+- `automata.py` — regex parser, Thompson NFA, subset construction, Hopcroft minimization, scanner.
 - `main.py` — CLI.
-- `tests/run_tests.py` — автоматические проверки.
+- `tests/run_tests.py` — тесты.
 - `output/` — результаты построения.
+- `REPORT.md` — краткий отчёт.
 
-## Регулярные выражения
-
-Используются:
+## Токены
 
 ```text
 IDENT      [A-Za-z_][A-Za-z0-9_]*
@@ -78,84 +71,18 @@ function returns uses while if else true false
 assert assume invariant length
 ```
 
-Операторы/разделители:
+Операторы и разделители:
 
 ```text
 + - * / == != <= >= < > = , ; ( ) [ ] { }
 ```
 
-Алфавит — ASCII 0..127.
+Алфавит — ASCII 0..127. WS и COMMENT пропускаются.
 
-`WS` и `COMMENT` являются skip-токенами.
-
-## Важное замечание про `00` и `01`
-
-Регулярное выражение `INT = 0|[1-9][0-9]*` не принимает `00` или `01` как один `INT`.
-
-Но при обычном maximal-munch сканировании:
+## Размеры автоматов
 
 ```text
-00 -> INT("0"), INT("0")
-01 -> INT("0"), INT("1")
+NFA states: 1247
+DFA states: 342
+Minimal DFA states: 88
 ```
-
-Поэтому эти строки не являются ошибкой на уровне лексера: они разбиваются на два корректных токена. Если преподаватель требует считать `00`/`01` целиком ошибкой, нужен отдельный диагностический rule перед `INT`, например `0[0-9]+`, который помечается как ERROR. В текущей версии оставлено строгое поведение по заданному `INT`.
-
-## Longest match
-
-Например:
-
-```text
-==  → EQ
-=   → ASSIGN
-<=  → LE
-<   → LT
-function → FUNCTION
-functionality → IDENT
-```
-
-Причина последнего случая: `function` и `functionality` имеют разные длины, поэтому longest match выбирает весь `functionality`, после чего состояние принимает `IDENT`.
-
-## Отчёт
-
-После:
-
-```bash
-python main.py build
-```
-
-команда печатает:
-
-```text
-NFA states: ...
-DFA states: ...
-Minimal DFA states: ...
-```
-
-Эти числа следует вставить в краткий отчёт вместе с описанием ловушки.
-
-Минимизация выполняется после того, как ДКА сделан полным: для отсутствующих переходов добавляется явное rejecting trap state. Это соответствует требованию задания о покрытии всего ASCII-алфавита.
-
-## Почему структура соответствует HW1
-
-Pipeline:
-
-```text
-regex rules
-   ↓
-Thompson
-   ↓
-ε-NFA
-   ↓
-epsilon-closure + subset construction
-   ↓
-DFA
-   ↓
-complete + remove unreachable
-   ↓
-Hopcroft
-   ↓
-minimal total DFA
-```
-
-Состояние DFA хранит информацию о наиболее приоритетном принимающем правиле. Это позволяет использовать тот же автомат как основу для будущего лексера HW2/P02.
