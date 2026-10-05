@@ -1,0 +1,5 @@
+NFA states: 1247
+DFA states: 342
+Minimal DFA states: 88
+Minimal DFA accepting states: 85
+Alphabet: ASCII 0..127 (128 symbols)
